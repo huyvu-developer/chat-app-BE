@@ -60,4 +60,9 @@ export class AuthService {
     const [type, token] = bearerToken.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;
   }
+
+  async getInformationLogged(bearerToken: string) {
+    const token = this.extractTokenFromHeader(bearerToken);
+    return await this.validateToken(token);
+  }
 }

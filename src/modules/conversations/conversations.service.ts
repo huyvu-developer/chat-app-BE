@@ -1,10 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import { MessagesService } from './../messages/messages.service';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { BaseService } from '../base/base.service';
-import { Conversation } from './schema/conversation.schema';
+import {
+  Conversation,
+  ConversationDocument,
+} from './schema/conversation.schema';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { UpdateConversationDto } from './dto/update-conversation.dto';
-import { ConversationRepository } from './conversations.repository';
-import { MessageRepository } from '../messages/message.repository';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class ConversationsService extends BaseService<
@@ -13,24 +17,30 @@ export class ConversationsService extends BaseService<
   UpdateConversationDto
 > {
   constructor(
-    private readonly conversationRepository: ConversationRepository,
-    private readonly messageRepository: MessageRepository,
+    @Inject(forwardRef(() => MessagesService))
+    private readonly messagesService: MessagesService,
+    @InjectModel(Conversation.name)
+    private readonly conversationModel: Model<ConversationDocument>,
   ) {
-    super(conversationRepository);
+    super(conversationModel);
   }
 
   async getConversationByUser(
     userId: string,
-  ): Promise<(Conversation & { unreadCount: number })[]> {
-    const conversations =
-      this.conversationRepository.getConversationByUser(userId);
+  ): Promise<(Partial<Conversation> & { unreadCount: number })[]> {
+    const conversations = await this.conversationModel
+      .find({
+        members: { $elemMatch: { user: userId } },
+      })
+      .lean()
+      .exec();
     const conversationWithUnreadCount = await Promise.all(
       (await conversations).map(async (conversation) => {
-        const unreadCount = await this.messageRepository.getUnreadMessages(
+        const unreadCount = await this.messagesService.getUnreadMessages(
           conversation._id.toString(),
           userId,
         );
-        return { ...conversation.toObject(), unreadCount };
+        return { ...conversation, unreadCount };
       }),
     );
     return conversationWithUnreadCount;

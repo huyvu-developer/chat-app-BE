@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { BaseService } from '../base/base.service';
-import { MessageRepository } from './message.repository';
-import { Message } from './schema/message.schema';
+import { Message, MessageDocument } from './schema/message.schema';
 import { CreateMessageDto } from './dto/create-message.dto';
-import { Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { ConversationsService } from '../conversations/conversations.service';
 
 @Injectable()
@@ -13,14 +13,16 @@ export class MessagesService extends BaseService<
   any
 > {
   constructor(
-    private readonly messageRepository: MessageRepository,
+    @Inject(forwardRef(() => ConversationsService))
     private readonly conversationsService: ConversationsService,
+    @InjectModel(Message.name)
+    private readonly messageModel: Model<MessageDocument>,
   ) {
-    super(messageRepository);
+    super(messageModel);
   }
 
   async create(data: CreateMessageDto): Promise<Message> {
-    const message = await this.messageRepository.create({
+    const message = await this.messageModel.create({
       ...data,
       sender: new Types.ObjectId(data.sender),
       reply: data.reply ? new Types.ObjectId(data.reply) : undefined,
@@ -39,14 +41,44 @@ export class MessagesService extends BaseService<
     return message;
   }
 
+  async getUnreadMessages(
+    conversationId: string,
+    userId: string,
+  ): Promise<number> {
+    return await this.messageModel
+      .countDocuments({
+        conversation: conversationId,
+        'readStatus.userId': { $ne: userId },
+        sender: { $ne: userId },
+      })
+      .exec();
+  }
+
   async getConversationMessages(conversationId: string): Promise<Message[]> {
-    return await this.messageRepository.getConversationMessages(conversationId);
+    return await this.messageModel
+      .find({ conversation: conversationId })
+      .sort({ order: 1 })
+      .exec();
   }
 
   async updateReadStatus(conversationId: string, userId: string) {
-    return await this.messageRepository.updateReadStatus(
-      conversationId,
-      userId,
-    );
+    const filter = {
+      conversation: { $eq: conversationId },
+      'readStatus.userId': { $ne: userId },
+    };
+    const update = {
+      $push: {
+        readStatus: {
+          userId: userId,
+          readAt: new Date(),
+        },
+      },
+    };
+
+    const response = await this.messageModel.updateMany(filter, update).exec();
+    return {
+      matchedCount: response.matchedCount,
+      modifiedCount: response.modifiedCount,
+    };
   }
 }
