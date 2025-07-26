@@ -37,7 +37,7 @@ ConversationSchema.pre<ConversationDocument>(
     try {
       this.populate({
         path: 'lastMessage',
-        select: 'content type sender attachments',
+        select: 'content type sender attachments createdAt',
       });
       this.populate({ path: 'members.user' });
       next();
