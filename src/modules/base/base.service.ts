@@ -2,25 +2,26 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class BaseService<TModel, TCreateDto, TUpdateDto> {
-  constructor(private readonly repository: any) {}
+  constructor(private readonly model: any) {}
 
   async findAll(): Promise<TModel[]> {
-    return await this.repository.findAll();
+    return await this.model.find().exec();
   }
 
   async findById(id: string): Promise<TModel | null> {
-    return await this.repository.findById(id);
+    return await this.model.findById(id).exec();
   }
 
   async create(data: TCreateDto): Promise<TModel> {
-    return await this.repository.create(data);
+    const created = new this.model(data);
+    return created.save();
   }
 
   async update(id: string, data: TUpdateDto): Promise<TModel | null> {
-    return await this.repository.update(id, data);
+    return this.model.findByIdAndUpdate(id, data, { new: true }).exec();
   }
 
   async delete(id: string): Promise<TModel | null> {
-    return await this.repository.delete(id);
+    return this.model.findByIdAndDelete(id).exec();
   }
 }

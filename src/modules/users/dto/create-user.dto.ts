@@ -30,5 +30,5 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   @Length(0, 255)
-  avatar: string;
+  avatar?: string;
 }

@@ -39,4 +39,9 @@ export class ConversationsController {
   async delete(@Param('id') id: string) {
     return await this.conversationService.delete(id);
   }
+
+  @Get('user/:userId')
+  async getConversationByUser(@Param('userId') userId: string) {
+    return await this.conversationService.getConversationByUser(userId);
+  }
 }

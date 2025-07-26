@@ -3,7 +3,6 @@ import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from './schemas/user.schema';
-import { UsersRepository } from './users.repository';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
@@ -11,7 +10,7 @@ import { AuthModule } from '../auth/auth.module';
     forwardRef(() => AuthModule),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
   ],
-  providers: [UsersService, UsersRepository],
+  providers: [UsersService],
   controllers: [UsersController],
   exports: [UsersService],
 })
